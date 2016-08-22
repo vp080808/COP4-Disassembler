@@ -31,13 +31,7 @@ void abend(char *pnam, char *ers, int ern)
 #define XX_1ARG         1
 #define XX_2ARG         2
 
-#define FIXD(D)                 (((D) == 15) ? 0 : (D)+1)
-
-#define XX_PRT(S)               xx_prt(addr, ii, arg, (S), XX_0ARG)
-#define XX_PRT2(S, A)           xx_prt(addr, ii, arg, (S), XX_1ARG, (A))
-#define XX_PRT3(S, A, B)        xx_prt(addr, ii, arg, (S), XX_2ARG, (A), (B))
-
-#define XX_PRTX(S, A, B)        xx_prt(addr, ii, arg, (S), XX_ADDR, (A), (B))
+#define FIXD(D)                 (((D)+1) % 16)
 
 /* 
  * GET_PAGE_NO  -- extract the page number from an address
@@ -69,6 +63,12 @@ void abend(char *pnam, char *ers, int ern)
  *      shifting the address 6 positions.
  */
 #define GET_PAGE_NO(ADDR)       (ADDR >> 6)
+
+#define XX_PRT(S)               xx_prt(addr, ii, arg, (S), XX_0ARG)
+#define XX_PRT2(S, A)           xx_prt(addr, ii, arg, (S), XX_1ARG, (A))
+#define XX_PRT3(S, A, B)        xx_prt(addr, ii, arg, (S), XX_2ARG, (A), (B))
+
+#define XX_PRTX(S, A, B)        xx_prt(addr, ii, arg, (S), XX_ADDR, (A), (B))
 
 void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...)
 {
