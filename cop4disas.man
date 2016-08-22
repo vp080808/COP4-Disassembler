@@ -1,0 +1,22 @@
+.TH COP4DISASS L "22 August 2016"
+.UC 4
+.SH NAME
+cop4disas \- disassemble COP4 executable
+.SH SYNOPSIS
+.B cop4disas
+[ \-a address] file
+.SH DESCRIPTION
+.I cop4disas
+will disassemble a COP4 executable.
+.PP
+File
+.IR file
+contains binary data, which cop4disas will interpet
+as COP4 machine language code.
+.PP
+By default, the starting addres is 0x000, but this can be changed
+with the -a option (e.g. cop4disas -a 0x80 file).
+.PP
+The -a option specifies a new starting addres.
+.SH "SEE ALSO"
+gas(1)
