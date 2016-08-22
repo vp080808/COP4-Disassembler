@@ -39,6 +39,37 @@ void abend(char *pnam, char *ers, int ern)
 
 #define XX_PRTX(S, A, B)        xx_prt(addr, ii, arg, (S), XX_ADDR, (A), (B))
 
+/* 
+ * GET_PAGE_NO  -- extract the page number from an address
+ *
+ *      COP4 memory is 1024 bytes, split into 16 pages (numbered 0 to 15) of
+ *      64 bytes each. 
+ *
+ *              Page 0  000 - 03F
+ *              Page 1  040 - 07F
+ *              Page 2  080 - 0BF       *** note special subroutine page
+ *              Page 3  0C0 - 0FF       *** note special subroutine page
+ *              Page 4  100 - 13F
+ *              Page 5  140 - 17F
+ *              Page 6  180 - 1BF
+ *              Page 7  1C0 - 1FF
+ *              Page 8  200 - 23F
+ *              Page 9  240 - 27F
+ *              Page 10 280 - 2BF
+ *              Page 11 2C0 - 2FF
+ *              Page 12 300 - 33F
+ *              Page 13 340 - 37F
+ *              Page 14 380 - 3BF
+ *              Page 15 3C0 - 3FF
+ *
+ *      The 10 bit address therefore comprises 4 bits of page number and
+ *      6 bits of page-offset.
+ *
+ *      GET_PAGE_NO extracts the page number from an address by right
+ *      shifting the address 6 positions.
+ */
+#define GET_PAGE_NO(ADDR)       (ADDR >> 6)
+
 void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...)
 {
         va_list argp;
@@ -276,7 +307,7 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                  */
                         unsigned int pnum;
 
-                        pnum = addr >> 6;       // current page number
+                        pnum = GET_PAGE_NO(addr);       // current page number
                         if ((pnum == 2) || (pnum == 3))
                                 XX_PRTX("JP", 0, ii);
                         else {
@@ -331,6 +362,8 @@ int main(int argc, char **argv)
 
         if ((fd = fopen(fname, "r")) == NULL)
                 abend(pnam, fname, -2);
+
+        printf("\t\t\t.PAGE     %d\n", GET_PAGE_NO(addr));      // print starting page
 
         while ((ii = fgetc(fd)) != EOF)
         {       
