@@ -24,13 +24,6 @@ void abend(char *pnam, char *ers, int ern)
         exit(ern);
 }
 
-#define XX_NOARG        0x4444
-
-#define XX_ADDR         100
-#define XX_0ARG         0
-#define XX_1ARG         1
-#define XX_2ARG         2
-
 #define FIXD(D)                 (((D)+1) % 16)
 
 /* 
@@ -64,12 +57,42 @@ void abend(char *pnam, char *ers, int ern)
  */
 #define GET_PAGE_NO(ADDR)       (ADDR >> 6)
 
+#define XX_NOARG        0x4444
+
+#define XX_0ARG         0
+#define XX_1ARG         1
+#define XX_2ARG         2
+#define XX_ADDR         100
+#define XX_1ARGX        201
+#define XX_2ARGX        202
+
+// Print macros XX_PRT* to print command and possibly arguments
+//      all commands print the current address, the hex represeantion
+//      of the command, the name, and an optional number of arguments.
+
+// XX_PRT -- print instruction, no arguments
 #define XX_PRT(S)               xx_prt(addr, ii, arg, (S), XX_0ARG)
+// XX_PRT -- print instruction, and one argument
 #define XX_PRT2(S, A)           xx_prt(addr, ii, arg, (S), XX_1ARG, (A))
+// XX_PRT -- print instruction, and one argument (in Hex)
+#define XX_PRT2X(S, A)          xx_prt(addr, ii, arg, (S), XX_1ARGX, (A))
+// XX_PRT -- print instruction, and two arguments
 #define XX_PRT3(S, A, B)        xx_prt(addr, ii, arg, (S), XX_2ARG, (A), (B))
 
+// XX_PRT -- print instruction, combining the two arguments in one address
 #define XX_PRTX(S, A, B)        xx_prt(addr, ii, arg, (S), XX_ADDR, (A), (B))
 
+/*
+ * xx_prt -- unified print routine
+ *
+ *      Avoid calling directly, use the XX_PRT* macros defined above.
+ *      All output formatting commands are in this routine, to avoid
+ *      having to look all over the place to chage the formatting of
+ *      the output.
+ *      This makes this routine ugly, and its API uglier. At least
+ *      if everybody uses the macros, we can change the internal API
+ *      to smth that is more elegant.
+ */
 void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...)
 {
         va_list argp;
@@ -85,6 +108,10 @@ void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...
         va_start(argp, fmt);
 
         switch (fmt) {
+        case XX_1ARGX:
+                a = va_arg(argp, unsigned int);
+                printf(" 0x%02X", a);
+                break;
         case XX_2ARG:
                 a = va_arg(argp, unsigned int);
                 printf(" %d,", a);
@@ -115,10 +142,10 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
         case 0x01:      XX_PRT2("SKMBZ", 0); break;
         case 0x02:      XX_PRT("XOR"); break;
         case 0x03:      XX_PRT2("SKMBZ", 2); break;
-        case 0x04:      XX_PRT2("XIS", 0); break;
-        case 0x05:      XX_PRT2("LD", 0); break;
-        case 0x06:      XX_PRT2("X", 0); break;
-        case 0x07:      XX_PRT2("XDS", 0); break;
+        case 0x04:      XX_PRT("XIS"); break;
+        case 0x05:      XX_PRT("LD"); break;
+        case 0x06:      XX_PRT("X"); break;
+        case 0x07:      XX_PRT("XDS"); break;
 
         case 0x08:
         case 0x09:
@@ -157,8 +184,10 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                         } else if ((arg & 0xC0) == 0x80) {
                                 // 10rrdddd     XAD             2 byte
                                 XX_PRT3("XAD", (arg >> 4) & 0x3, arg & 0xF);
-                        } else
-                                XX_PRTX("UNDEF OP 23", 0, arg);
+                        } else {
+                                XX_PRT2X(".WORD", 0x23);
+                                XX_PRT2X(".WORD", arg);
+                        }
                         break;
         case 0x24:      XX_PRT2("XIS", 2); break;
         case 0x25:      XX_PRT2("LD", 2); break;
@@ -201,10 +230,13 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                                         // the 2nd argument ranges from 1 till 8
                                         if (d >= 1 && d <= 8)
                                                 XX_PRT3("LBI", (arg >> 4) & 0x3, d);
-                                        else
-                                                XX_PRTX("UNDEF OP 33", 0, arg);
+                                        else {
+                                                XX_PRT2X(".WORD", 0x33);
+                                                XX_PRT2X(".WORD", arg);
+                                        }
                                 } else {
-                                        XX_PRTX("UNDEF OP 33", 0, arg);
+                                        XX_PRT2X(".WORD", 0x33);
+                                        XX_PRT2X(".WORD", arg);
                                 }
                         }
                         break;
@@ -283,7 +315,7 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
         case 0x7C:
         case 0x7D:
         case 0x7E:
-        case 0x7F:      XX_PRT2("STII", ii & 0xF); break;
+        case 0x7F:      XX_PRT2X("STII", ii & 0xF); break;
 
         case 0xBF:      XX_PRT("LQID"); break;
         case 0xFF:      XX_PRT("JID"); break;
@@ -317,7 +349,7 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                                         XX_PRTX("JP", 0, (pnum << 6) + (ii & 0x3F));
                         }
                 } else
-                        XX_PRTX("UNDEF OP", 0, ii);
+                        XX_PRT2X(".WORD", ii);
         }
 }
 
