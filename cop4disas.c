@@ -100,11 +100,11 @@ void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...
 
         printf("%03X\t%02X", addr, ii);
         if (arg != XX_NOARG)
-                printf(" %02X", arg);
+                printf("%02X", arg);
         else
-                printf("   ");
+                printf("  ");
 
-        printf("\t\t%s", lbl);
+        printf("\t\t\t%s", lbl);
         va_start(argp, fmt);
 
         switch (fmt) {
@@ -395,7 +395,7 @@ int main(int argc, char **argv)
         if ((fd = fopen(fname, "r")) == NULL)
                 abend(pnam, fname, -2);
 
-        printf("\t\t\t.PAGE     %d\n", GET_PAGE_NO(addr));      // print starting page
+        XX_PRT2(".PAGE", GET_PAGE_NO(addr));    // print starting page
 
         while ((ii = fgetc(fd)) != EOF)
         {       
@@ -422,4 +422,3 @@ int main(int argc, char **argv)
                         addr++;
         }
 }
-
