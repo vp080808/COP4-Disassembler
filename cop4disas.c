@@ -1,16 +1,26 @@
 /*
  * cop4disas -- Quick & dirty disassembler for the NatSemi COP4 processor.
  *
- *      Usage: cop4disas [-a address] machine-code-file
+ *      Usage: cop4disas [-l] [-a address] machine-code-file
  *              The machine-code-file contains binary data, which cop4disas
  *              will interpet as COP4 machine language code.
  *
  *              By default, the starting addres is 0x000, but this can be changed
  *              with the -a option (e.g. cop4disas -a 0x80 file).
  *
+ *              Without the -l (long listing) flag, the program produces
+ *              output that can be fed to AS
+ *                      (http://john.ccac.rwth-aachen.de:8000/as)
+ *              Note that only versions at or above 1.42Bld98 support the
+ *              COP4 processor.
+ *
+ *              The long listing (-l) option produces addresses and binary
+ *              opcodes as well.
+ *
  *              Author: Vassilis Prevelakis (vp080808@gmail.com)
  *                      www.series80.org
- *              Date: 22 Aug. 2016
+ *              V. 0.1  Date: 22 Aug. 2016
+ *              V. 0.5  Date: 3 Oct. 2016
  *
  */
 #include <stdio.h>
@@ -82,6 +92,8 @@ void abend(char *pnam, char *ers, int ern)
 // XX_PRT -- print instruction, combining the two arguments in one address
 #define XX_PRTX(S, A, B)        xx_prt(addr, ii, arg, (S), XX_ADDR, (A), (B))
 
+static int long_listing = 0;    // long listing flag
+
 /*
  * xx_prt -- unified print routine
  *
@@ -98,13 +110,15 @@ void xx_prt(int addr, unsigned int ii, unsigned int arg, char *lbl, int fmt, ...
         va_list argp;
         unsigned int a;
 
-        printf("%03X\t%02X", addr, ii);
-        if (arg != XX_NOARG)
-                printf("%02X", arg);
-        else
-                printf("  ");
+        if (long_listing) {
+                printf("%03X\t%02X", addr, ii);
+                if (arg != XX_NOARG)
+                        printf("%02X\t\t", arg);
+                else
+                        printf("  \t\t");
+        }
 
-        printf("\t\t\t%s", lbl);
+        printf("\t%s", lbl);
         va_start(argp, fmt);
 
         switch (fmt) {
@@ -142,10 +156,10 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
         case 0x01:      XX_PRT2("SKMBZ", 0); break;
         case 0x02:      XX_PRT("XOR"); break;
         case 0x03:      XX_PRT2("SKMBZ", 2); break;
-        case 0x04:      XX_PRT("XIS"); break;
-        case 0x05:      XX_PRT("LD"); break;
-        case 0x06:      XX_PRT("X"); break;
-        case 0x07:      XX_PRT("XDS"); break;
+        case 0x04:      XX_PRT2("XIS", 0); break;
+        case 0x05:      XX_PRT2("LD", 0); break;
+        case 0x06:      XX_PRT2("X", 0); break;
+        case 0x07:      XX_PRT2("XDS", 0); break;
 
         case 0x08:
         case 0x09:
@@ -185,8 +199,8 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                                 // 10rrdddd     XAD             2 byte
                                 XX_PRT3("XAD", (arg >> 4) & 0x3, arg & 0xF);
                         } else {
-                                XX_PRT2X(".WORD", 0x23);
-                                XX_PRT2X(".WORD", arg);
+                                XX_PRT2X("DB", 0x23);
+                                XX_PRT2X("DB", arg);
                         }
                         break;
         case 0x24:      XX_PRT2("XIS", 2); break;
@@ -211,10 +225,15 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                         case 0x03:      XX_PRT2("SKGBZ", 2); break;
                         case 0x11:      XX_PRT2("SKGBZ", 1); break;
                         case 0x13:      XX_PRT2("SKGBZ", 3); break;
+                        case 0x21:      XX_PRT("SKGZ"); break;
                         case 0x28:      XX_PRT("ININ"); break;
                         case 0x29:      XX_PRT("INIL"); break;
                         case 0x2A:      XX_PRT("ING"); break;
                         case 0x2C:      XX_PRT("CQMA"); break;
+#ifdef COP444
+                        case 0x38:      XX_PRT("HALT"); break;          // COP 444 only
+                        case 0x39:      XX_PRT("IT"); break;            // COP 444 only
+#endif /*COP444*/
                         case 0x3C:      XX_PRT("CAMQ"); break;
                         case 0x2E:      XX_PRT("INL"); break;
                         case 0x3E:      XX_PRT("OBD"); break;
@@ -231,12 +250,12 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                                         if (d >= 1 && d <= 8)
                                                 XX_PRT3("LBI", (arg >> 4) & 0x3, d);
                                         else {
-                                                XX_PRT2X(".WORD", 0x33);
-                                                XX_PRT2X(".WORD", arg);
+                                                XX_PRT2X("DB", 0x33);
+                                                XX_PRT2X("DB", arg);
                                         }
                                 } else {
-                                        XX_PRT2X(".WORD", 0x33);
-                                        XX_PRT2X(".WORD", arg);
+                                        XX_PRT2X("DB", 0x33);
+                                        XX_PRT2X("DB", arg);
                                 }
                         }
                         break;
@@ -331,7 +350,7 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                  * opcodes decode differently depending on the page
                  * they are located.
                  * Within pages 2 and 3 opcodes 0x80 - 0xBF
-                 *      decode to JP 0x00 to JP 0xBF
+                 *      decode to JP 0x80 to JP 0xBF
                  * While outside pages 2 and 3, opcodes 0x80 - 0xBF
                  *      decode to JSRP 0x80 - 0xBE
                  * in this case the opcode is the address, since
@@ -349,13 +368,13 @@ void process_opcode(int addr, unsigned int ii, unsigned int arg)
                                         XX_PRTX("JP", 0, (pnum << 6) + (ii & 0x3F));
                         }
                 } else
-                        XX_PRT2X(".WORD", ii);
+                        XX_PRT2X("DB", ii);
         }
 }
 
 void usage(char *pnam, int ern)
 {
-        fprintf(stderr, "Usage(%d): %s [-a addr] filename\n", ern, pnam);
+        fprintf(stderr, "Usage(%d): %s [-l] [-a addr] filename\n", ern, pnam);
         exit(-1);
 }
 
@@ -364,7 +383,8 @@ int main(int argc, char **argv)
         char *pnam;
         char *fname;
         FILE *fd;
-        unsigned int    ii, arg;
+        unsigned int    ii = 0;
+        unsigned int    arg = 0;
         int addr = 0;
 
         pnam = argv[0];
@@ -376,7 +396,12 @@ int main(int argc, char **argv)
                 while (argc > 0 && **argv == '-')
                 {
                         switch (*(*argv+1)) {
-                        case 'a':
+                        case 'l':       // long listing (addresses etc)
+                                long_listing++;
+                                argv++;
+                                argc--;
+                                break;
+                        case 'a':       // specify starting addr
                                 addr = strtol(*++argv, NULL, 0);
                                 argv++;
                                 argc -= 2;
@@ -395,7 +420,8 @@ int main(int argc, char **argv)
         if ((fd = fopen(fname, "r")) == NULL)
                 abend(pnam, fname, -2);
 
-        XX_PRT2(".PAGE", GET_PAGE_NO(addr));    // print starting page
+        XX_PRT("CPU\tcop420");                  // we only do COP420
+        XX_PRT2("ORG", GET_PAGE_NO(addr));      // print starting page
 
         while ((ii = fgetc(fd)) != EOF)
         {       
