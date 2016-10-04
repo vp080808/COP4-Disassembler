@@ -4,7 +4,7 @@
 cop4disas \- disassemble COP4 executable
 .SH SYNOPSIS
 .B cop4disas
-[ \-a address] file
+[ \-l] [ \-a address] file
 .SH DESCRIPTION
 .I cop4disas
 will disassemble a COP4 executable.
@@ -17,6 +17,8 @@ as COP4 machine language code.
 By default, the starting addres is 0x000, but this can be changed
 with the -a option (e.g. cop4disas -a 0x80 file).
 .PP
-The -a option specifies a new starting addres.
+The -a option specifies a new starting address.
+.PP
+The -l flag will produce a long listing with adrresses and binary opcodes.
 .SH "SEE ALSO"
-gas(1)
+cop4disass produces output compatible with the AS macro assembler (http://john.ccac.rwth-aachen.de:8000/as)
